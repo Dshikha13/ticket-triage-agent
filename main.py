@@ -7,6 +7,19 @@ from jira import JIRA
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from mcp.server.fastmcp import FastMCP
+import json as _json
+
+def store_pending_approval(ticket_id: str, assignee: str, reasoning: str):
+    PENDING_FILE = "/tmp/pending_approvals.json"
+    try:
+        with open(PENDING_FILE, "r") as f:
+            data = _json.load(f)
+    except:
+        data = {}
+    data[ticket_id] = {"assignee": assignee, "reasoning": reasoning}
+    with open(PENDING_FILE, "w") as f:
+        _json.dump(data, f)
+    print(f"Stored pending approval for {ticket_id}")
 
 load_dotenv()
 
@@ -132,10 +145,14 @@ def send_slack_recommendation(ticket_id: str, recommended_assignee: str, reasoni
 *Recommended Assignee:* {recommended_assignee}
 *Reasoning:* {reasoning}
 
-Please review and reply *approved* in Claude to log this to Jira, or *rejected* to cancel."""
+Please review and type *approved* in this channel to log this to Jira."""
 
         client.chat_postMessage(channel=channel, text=message)
-        return f"Recommendation sent to Slack channel {channel}. Waiting for human approval in Claude before writing to Jira."
+        
+        # Store pending approval for webhook
+        store_pending_approval(ticket_id, recommended_assignee, reasoning)
+        
+        return f"Recommendation sent to Slack channel {channel}. Type 'approved' in Slack to write to Jira."
     except SlackApiError as e:
         return f"Could not send Slack message. Error: {str(e)}"
 
