@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticket Triage Agent — Deepshikha Singh</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #09090b;
+    --white: #fafaf9;
+    --gray-1: #141416;
+    --gray-2: #1e1e22;
+    --gray-3: #2a2a30;
+    --gray-4: #71717a;
+    --gray-5: #a1a1aa;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --accent-glow: rgba(99,102,241,0.15);
+    --accent-glow-2: rgba(99,102,241,0.06);
+    --green: #22c55e;
+    --green-glow: rgba(34,197,94,0.12);
+    --amber: #f59e0b;
+    --amber-glow: rgba(245,158,11,0.12);
+    --font-sans: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* AMBIENT GLOW */
+  .glow-bg {
+    position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+    width: 800px; height: 600px;
+    background: radial-gradient(ellipse at center, rgba(99,102,241,0.08) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 48px;
+    background: rgba(9,9,11,0.8);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .nav-logo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent-light);
+    letter-spacing: 0.04em;
+  }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    font-size: 13px; color: var(--gray-4); text-decoration: none;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover { color: var(--white); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 120px 48px 80px;
+    max-width: 960px;
+    margin: 0 auto;
+    position: relative; z-index: 1;
+  }
+  .hero-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-light);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hero-tag::before {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--accent);
+  }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 76px);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 28px;
+  }
+  .hero h1 .highlight {
+    background: linear-gradient(135deg, var(--accent-light), #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    font-size: 18px;
+    color: var(--gray-5);
+    max-width: 580px;
+    margin-bottom: 48px;
+    line-height: 1.7;
+  }
+  .hero-sub .you-approve {
+    color: var(--white);
+    font-weight: 600;
+    background: var(--accent-glow);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(99,102,241,0.25);
+  }
+  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px;
+    font-size: 14px; font-weight: 500;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 24px rgba(99,102,241,0.3);
+  }
+  .btn-primary:hover { background: var(--accent-light); box-shadow: 0 0 32px rgba(99,102,241,0.4); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--gray-5);
+    border: 1px solid var(--gray-3);
+  }
+  .btn-ghost:hover { border-color: var(--gray-4); color: var(--white); }
+
+  /* TERMINAL */
+  .terminal {
+    background: var(--gray-1);
+    border: 1px solid var(--gray-3);
+    border-radius: 12px;
+    padding: 28px;
+    margin-top: 56px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 2;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+  }
+  .terminal::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+  .terminal-bar {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .t-prompt { color: var(--accent-light); }
+  .t-cmd { color: var(--white); }
+  .t-out { color: var(--gray-4); }
+  .t-green { color: var(--green); }
+  .t-amber { color: var(--amber); }
+  .t-line { opacity: 0; animation: fadeIn 0.3s forwards; }
+  .t-line:nth-child(2) { animation-delay: 0.2s; }
+  .t-line:nth-child(3) { animation-delay: 0.5s; }
+  .t-line:nth-child(4) { animation-delay: 0.9s; }
+  .t-line:nth-child(5) { animation-delay: 1.2s; }
+  .t-line:nth-child(6) { animation-delay: 1.6s; }
+  .t-line:nth-child(7) { animation-delay: 2.0s; }
+  .t-line:nth-child(8) { animation-delay: 2.5s; }
+  .t-line:nth-child(9) { animation-delay: 3.0s; }
+  .t-line:nth-child(10) { animation-delay: 3.6s; }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  /* STATS BAR */
+  .stats {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 40px 48px;
+    display: flex; gap: 0;
+    justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .stat {
+    flex: 1;
+    text-align: center;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    padding: 0 32px;
+  }
+  .stat:last-child { border-right: none; }
+  .stat-num {
+    font-family: var(--font-mono);
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--white);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--gray-4);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* SECTIONS */
+  section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 100px 48px;
+    position: relative; z-index: 1;
+  }
+  .section-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-light);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-tag::before {
+    content: '';
+    width: 16px; height: 1px;
+    background: var(--accent);
+  }
+  h2 {
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 48px;
+    line-height: 1.2;
+  }
+
+  /* PROBLEM */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .problem-card {
+    background: var(--gray-1);
+    border: 1px solid var(--gray-3);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .problem-card .pc-icon {
+    font-size: 24px;
+    margin-bottom: 16px;
+    display: block;
+    filter: grayscale(0);
+  }
+  .problem-card h3 {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .problem-card p {
+    font-size: 14px;
+    color: var(--gray-4);
+    line-height: 1.6;
+  }
+
+  /* FLOW */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .flow-step {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    padding: 28px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: all 0.3s;
+  }
+  .flow-step:hover {
+    padding-left: 8px;
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .step-marker {
+    width: 40px; height: 40px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .step-marker.m-auto { background: var(--accent-glow); color: var(--accent-light); border: 1px solid rgba(99,102,241,0.2); }
+  .step-marker.m-ai { background: rgba(168,85,247,0.12); color: #a855f7; border: 1px solid rgba(168,85,247,0.2); }
+  .step-marker.m-human { background: var(--green-glow); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .step-content h3 {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .step-content p {
+    font-size: 14px;
+    color: var(--gray-4);
+    line-height: 1.6;
+  }
+  .step-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge-ai { background: rgba(168,85,247,0.12); color: #a855f7; }
+  .badge-human { background: var(--green-glow); color: var(--green); }
+  .badge-auto { background: var(--accent-glow); color: var(--accent-light); }
+
+  /* DIFF */
+  .diff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 48px;
+  }
+  .diff-card {
+    background: var(--gray-1);
+    border: 1px solid var(--gray-3);
+    border-radius: 12px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .diff-card.mine::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+  }
+  .diff-card.theirs::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--gray-3);
+  }
+  .diff-card-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .diff-card.theirs .diff-card-label { color: var(--gray-4); }
+  .diff-card.mine .diff-card-label { color: var(--accent-light); }
+  .diff-card h3 {
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+  .diff-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .diff-list li {
+    font-size: 14px;
+    color: var(--gray-4);
+    padding-left: 24px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .diff-list li::before {
+    position: absolute; left: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .diff-card.theirs .diff-list li::before {
+    content: '—';
+    color: var(--gray-3);
+  }
+  .diff-card.mine .diff-list li::before {
+    content: '✓';
+    color: var(--green);
+  }
+  .diff-card.mine .diff-list li { color: var(--gray-5); }
+
+  /* COMPARED TO */
+  .compared-to {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+  .compared-label {
+    font-size: 12px;
+    color: var(--gray-4);
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+  }
+  .compared-pill {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 6px 14px;
+    background: var(--gray-2);
+    border: 1px solid var(--gray-3);
+    border-radius: 20px;
+    color: var(--gray-5);
+  }
+
+  /* TECH STACK */
+  .stack-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .stack-pill {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 10px 20px;
+    background: var(--gray-1);
+    border: 1px solid var(--gray-3);
+    border-radius: 8px;
+    color: var(--gray-5);
+    transition: all 0.3s;
+  }
+  .stack-pill:hover {
+    border-color: var(--accent);
+    color: var(--white);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+
+  /* ROADMAP */
+  .roadmap {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .roadmap-item {
+    background: var(--gray-1);
+    border: 1px solid var(--gray-3);
+    border-radius: 12px;
+    padding: 24px 28px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .roadmap-version {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .rv-shipped { background: var(--green-glow); color: var(--green); }
+  .rv-planned { background: var(--amber-glow); color: var(--amber); }
+  .roadmap-content h3 {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .roadmap-content p {
+    font-size: 13px;
+    color: var(--gray-4);
+    line-height: 1.5;
+  }
+
+  /* CTA */
+  .cta-section {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 100px 48px;
+    text-align: center;
+    position: relative; z-index: 1;
+  }
+  .cta-section h2 {
+    margin-bottom: 16px;
+    font-size: 40px;
+  }
+  .cta-section p {
+    color: var(--gray-4);
+    margin-bottom: 48px;
+    font-size: 17px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 48px;
+  }
+  .cta-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 32px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative; z-index: 1;
+  }
+  footer p { font-size: 13px; color: var(--gray-4); }
+  footer a { color: var(--gray-4); text-decoration: none; font-size: 13px; transition: color 0.3s; }
+  footer a:hover { color: var(--white); }
+
+  @media (max-width: 700px) {
+    nav { padding: 14px 20px; }
+    .nav-links { gap: 20px; }
+    .hero, section { padding: 80px 20px 48px; }
+    .hero h1 { font-size: 36px; }
+    .stats { flex-direction: column; padding: 24px 20px; gap: 24px; }
+    .stat { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 16px 0; }
+    .stat:last-child { border-bottom: none; }
+    .diff-grid { grid-template-columns: 1fr; }
+    .problem-grid { grid-template-columns: 1fr; }
+    .cta-section { padding: 48px 20px; }
+    footer { flex-direction: column; gap: 12px; text-align: center; padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-bg"></div>
+
+<nav>
+  <span class="nav-logo">ticket-triage-agent</span>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#differentiation">Why different</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="https://github.com/Dshikha13/ticket-triage-agent" target="_blank">GitHub &#8599;</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <p class="hero-tag">Personal project &middot; AI agent &middot; MCP</p>
+  <h1>Stop triaging tickets<br><span class="highlight">manually.</span></h1>
+  <p class="hero-sub">An AI agent that reads incoming support tickets, evaluates team capacity and client history, and sends a recommendation to Slack. It writes to Jira only after <span class="you-approve">you approve</span>.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/Dshikha13/ticket-triage-agent" target="_blank" class="btn btn-primary">Explore the code &#8599;</a>
+    <a href="#how-it-works" class="btn btn-ghost">See how it works</a>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+    </div>
+    <div class="t-line"><span class="t-prompt">agent</span> <span class="t-cmd">&rarr; Reading ticket HRO-79 from Jira...</span></div>
+    <div class="t-line"><span class="t-out">&nbsp;&nbsp;Issue: API returning 401 errors &middot; Client: Acme Corp &middot; Priority: High</span></div>
+    <div class="t-line"><span class="t-prompt">agent</span> <span class="t-cmd">&rarr; Classifying issue type...</span></div>
+    <div class="t-line"><span class="t-out">&nbsp;&nbsp;Category: technical_bug &rarr; routing to Technical Team</span></div>
+    <div class="t-line"><span class="t-prompt">agent</span> <span class="t-cmd">&rarr; Evaluating team availability and client history...</span></div>
+    <div class="t-line"><span class="t-green">&nbsp;&nbsp;&#10003; Alice &mdash; 10hrs available, prior history with Acme Corp</span></div>
+    <div class="t-line"><span class="t-prompt">agent</span> <span class="t-cmd">&rarr; Sending recommendation to Slack...</span></div>
+    <div class="t-line"><span class="t-amber">&nbsp;&nbsp;&#9203; Waiting for your approval...</span></div>
+    <div class="t-line"><span class="t-green">&nbsp;&nbsp;&#10003; Approved by Shikha Singh &middot; Writing to Jira HRO-79</span></div>
+    <div class="t-line"><span class="t-green">&nbsp;&nbsp;&#10003; Done. Audit trail saved.</span></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <span class="stat-num">~15min</span>
+    <span class="stat-label">saved per ticket</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num">6</span>
+    <span class="stat-label">MCP skills</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num">0</span>
+    <span class="stat-label">auto-writes without approval</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num">v2</span>
+    <span class="stat-label">shipped</span>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<section>
+  <p class="section-tag">The problem</p>
+  <h2>Triage eats your team's time</h2>
+  <div class="problem-grid">
+    <div class="problem-card">
+      <span class="pc-icon">&#128269;</span>
+      <h3>Read every ticket manually</h3>
+      <p>Someone opens each ticket, reads the description, checks attachments, and figures out what kind of issue it is.</p>
+    </div>
+    <div class="problem-card">
+      <span class="pc-icon">&#128101;</span>
+      <h3>Hunt for the right person</h3>
+      <p>Then they check who is available, who knows the client, who is already overloaded, and who has the right skills.</p>
+    </div>
+    <div class="problem-card">
+      <span class="pc-icon">&#9200;</span>
+      <h3>10 to 15 minutes, every time</h3>
+      <p>This process repeats for every single ticket. It is repetitive, slow, and pulls your best people away from real work.</p>
+    </div>
+    <div class="problem-card">
+      <span class="pc-icon">&#9888;&#65039;</span>
+      <h3>Wrong assignments cost more</h3>
+      <p>Assign to someone without client context and they spend the first hour just understanding the environment.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <p class="section-tag">The flow</p>
+  <h2>From ticket to assignment in seconds</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="step-marker m-auto">01</div>
+      <div class="step-content">
+        <h3>Read the ticket <span class="step-badge badge-auto">Jira API</span></h3>
+        <p>The agent fetches the real ticket from Jira. Summary, description, priority, client name, reporter. One API call, all the context.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-marker m-ai">02</div>
+      <div class="step-content">
+        <h3>Classify the issue <span class="step-badge badge-ai">AI reasoning</span></h3>
+        <p>Claude reads the unstructured description and classifies it. Technical bug, business request, or general question. This is the one step that genuinely needs LLM judgment.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-marker m-auto">03</div>
+      <div class="step-content">
+        <h3>Route to the right team <span class="step-badge badge-auto">deterministic</span></h3>
+        <p>Category maps to a team. This is a lookup table, not AI guessing. A deliberate design choice that keeps it fast and reliable.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-marker m-ai">04</div>
+      <div class="step-content">
+        <h3>Match availability + client history <span class="step-badge badge-ai">AI reasoning</span></h3>
+        <p>Who on the team has bandwidth? Who has worked with this client before? For critical tickets, the agent can pull someone off lower priority work.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-marker m-auto">05</div>
+      <div class="step-content">
+        <h3>Send to Slack for review <span class="step-badge badge-auto">Slack SDK</span></h3>
+        <p>The recommendation goes to your Slack channel with full reasoning. Who, why, and what the ticket is about. You read it where you already work.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-marker m-human">06</div>
+      <div class="step-content">
+        <h3>You approve in Slack <span class="step-badge badge-human">human in the loop</span></h3>
+        <p>Type "approved" in Slack. The webhook captures your real display name automatically. Nothing happens to Jira until you say so.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-marker m-auto">07</div>
+      <div class="step-content">
+        <h3>Audit trail written to Jira <span class="step-badge badge-auto">Jira API</span></h3>
+        <p>A structured comment is posted to the ticket: recommended assignee, full reasoning, and your name as the approver. Permanent and searchable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIFFERENTIATION -->
+<section id="differentiation">
+  <p class="section-tag">Why this is different</p>
+  <h2>Most tools classify.<br>This one assigns.</h2>
+  <div class="diff-grid">
+    <div class="diff-card theirs">
+      <p class="diff-card-label">Existing tools</p>
+      <h3>Stop at classification and priority</h3>
+      <ul class="diff-list">
+        <li>Classify ticket type and assign priority</li>
+        <li>Suggest a team or routing queue</li>
+        <li>Generate a response template</li>
+        <li>No client relationship awareness</li>
+        <li>No capacity checking per person</li>
+        <li>No approval gate or audit trail</li>
+      </ul>
+    </div>
+    <div class="diff-card mine">
+      <p class="diff-card-label">This agent</p>
+      <h3>Recommends a specific person, safely</h3>
+      <ul class="diff-list">
+        <li>Matches to a person, not just a team</li>
+        <li>Weighs client history as a routing factor</li>
+        <li>Checks real availability before recommending</li>
+        <li>Applies severity logic for edge cases</li>
+        <li>Gates every write behind your approval</li>
+        <li>Captures your name in the Jira audit trail</li>
+      </ul>
+    </div>
+  </div>
+  <div class="compared-to">
+    <span class="compared-label">Compared against:</span>
+    <span class="compared-pill">Anthropic ticket-triage skill</span>
+    <span class="compared-pill">Linear AI triage automation</span>
+    <span class="compared-pill">Agentlify support-triage-agent</span>
+    <span class="compared-pill">mcp-ticketer</span>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section>
+  <p class="section-tag">Built with</p>
+  <h2>The stack</h2>
+  <div class="stack-grid">
+    <span class="stack-pill">Python</span>
+    <span class="stack-pill">FastMCP</span>
+    <span class="stack-pill">Jira API</span>
+    <span class="stack-pill">Slack SDK</span>
+    <span class="stack-pill">ngrok</span>
+    <span class="stack-pill">Claude Desktop</span>
+    <span class="stack-pill">Anthropic API</span>
+    <span class="stack-pill">dotenv</span>
+    <span class="stack-pill">Webhook server</span>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <p class="section-tag">Evolution</p>
+  <h2>Built in iterations, not all at once</h2>
+  <div class="roadmap">
+    <div class="roadmap-item">
+      <span class="roadmap-version rv-shipped">v1</span>
+      <div class="roadmap-content">
+        <h3>MCP agent with Jira and Slack integration</h3>
+        <p>Agent reads real Jira tickets, applies triage logic, sends Slack notification. Approval happens in Claude Desktop, then comment is written to Jira.</p>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <span class="roadmap-version rv-shipped">v2</span>
+      <div class="roadmap-content">
+        <h3>Slack webhook approval with named audit trail</h3>
+        <p>Human approves directly in Slack. Webhook server captures the approver's real display name and writes it to the Jira comment. No Claude Desktop needed for approval.</p>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <span class="roadmap-version rv-planned">v3</span>
+      <div class="roadmap-content">
+        <h3>Fully automated end to end</h3>
+        <p>Jira webhook triggers triage automatically on ticket creation. Team availability pulled from live data. Zero manual steps from ticket creation to assignment recommendation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Read the code,<br>not just the pitch.</h2>
+  <p>Everything is open source. The README explains every design decision, what was scoped out, why, and what comes next.</p>
+  <div class="cta-actions">
+    <a href="https://github.com/Dshikha13/ticket-triage-agent" target="_blank" class="btn btn-primary">Explore the code &#8599;</a>
+    <a href="https://www.linkedin.com/in/deepshikhasingh13" target="_blank" class="btn btn-ghost">Connect on LinkedIn</a>
+  </div>
+</div>
+
+<footer>
+  <p>Built by Deepshikha Singh &middot; MIT License</p>
+  <a href="https://github.com/Dshikha13/ticket-triage-agent" target="_blank">github.com/Dshikha13/ticket-triage-agent</a>
+</footer>
+
+</body>
+</html>
